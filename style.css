@@ -1,0 +1,206 @@
+* {
+  box-sizing: border-box;
+  -moz-user-select: none;
+       user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: #0f111a;
+  color: #ffffff;
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  gap: 20px;
+}
+
+.hud-panel {
+  background: #1a1d2d;
+  padding: 20px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.level-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(to right, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: 700;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.progress-track {
+  height: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 100px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 50%;
+  border-radius: 100px;
+  transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.xp-fill {
+  background: linear-gradient(90deg, #3b82f6, rgb(156.5219512195, 192.1951219512, 250.4780487805));
+}
+
+.stress-fill {
+  background: linear-gradient(90deg, #10b981, rgb(20.0597014925, 231.9402985075, 161.7313432836));
+}
+
+.character-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-avatar {
+  font-size: clamp(6rem, 20vw, 12rem);
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+  transition: transform 0.1s;
+  cursor: pointer;
+  z-index: 2;
+}
+.emoji-avatar:active {
+  transform: scale(0.9);
+}
+
+.bubble {
+  position: absolute;
+  top: 10%;
+  background: #1a1d2d;
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  z-index: 10;
+  text-align: center;
+  max-width: 90%;
+}
+.bubble.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 10px 10px 0;
+  border-style: solid;
+  border-color: #1a1d2d transparent transparent transparent;
+}
+
+.control-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.big-btn {
+  border: none;
+  border-radius: 24px;
+  padding: 20px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, filter 0.2s;
+  position: relative;
+  overflow: hidden;
+  height: 110px;
+}
+.big-btn:active {
+  transform: scale(0.96);
+}
+.big-btn.disabled {
+  filter: grayscale(1) opacity(0.5);
+  pointer-events: none;
+}
+
+.code-btn {
+  background: #3b82f6;
+  box-shadow: 0 6px 0 rgb(8.912195122, 79.2195121951, 194.087804878);
+}
+.code-btn:active {
+  box-shadow: 0 0 0 transparent;
+  transform: translateY(6px);
+}
+
+.sleep-btn {
+  background: #10b981;
+  box-shadow: 0 6px 0 rgb(7.8805970149, 91.1194029851, 63.5373134328);
+}
+.sleep-btn:active {
+  box-shadow: 0 0 0 transparent;
+  transform: translateY(6px);
+}
+
+.btn-icon {
+  font-size: 2rem;
+}
+
+.btn-label {
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: white;
+  letter-spacing: 1px;
+}
+
+.btn-sub {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  font-weight: 600;
+  color: white;
+}/*# sourceMappingURL=style.css.map */

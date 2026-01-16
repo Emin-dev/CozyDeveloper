@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dev Evolution</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-layout">
+        <header class="hud-panel">
+            <h1 id="level-display" class="level-title">LVL 1 JUNIOR</h1>
+            
+            <div class="stat-row">
+                <div class="stat-info">
+                    <span>XP</span>
+                    <span id="xp-text">0/100</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill xp-fill" id="xp-bar"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-info">
+                    <span>BURNOUT</span>
+                    <span id="stress-text">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill stress-fill" id="stress-bar"></div>
+                </div>
+            </div>
+        </header>
+
+        <main class="character-stage">
+            <div id="speech" class="bubble">I broke production...</div>
+            <div id="avatar" class="emoji-avatar">👶</div>
+        </main>
+
+        <footer class="control-panel">
+            <button id="btn-code" class="big-btn code-btn">
+                <span class="btn-icon">💻</span>
+                <span class="btn-label">CODE</span>
+                <span class="btn-sub">Gain XP (+Stress)</span>
+            </button>
+            <button id="btn-sleep" class="big-btn sleep-btn">
+                <span class="btn-icon">☕</span>
+                <span class="btn-label">REST</span>
+                <span class="btn-sub">Heal Burnout</span>
+            </button>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
