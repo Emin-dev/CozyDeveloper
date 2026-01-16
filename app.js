@@ -43,10 +43,30 @@ class AudioEngine {
         osc.stop(this.ctx.currentTime + duration);
     }
 
-    sfxClick() { this.playTone(600, 'square', 0.05); } 
-    sfxRest() { this.playTone(300, 'sine', 0.3); } 
-    sfxBuy() { this.playTone(1200, 'triangle', 0.1); this.playTone(1800, 'triangle', 0.1); } 
-    sfxCrash() { this.playTone(100, 'sawtooth', 1.0); this.playTone(80, 'sawtooth', 1.0); }
+    sfxClick() {
+    this.playTone(240, 'sine', 0.12);
+    this.playTone(480, 'sine', 0.08);
+}
+
+sfxRest() {
+    this.playTone(220, 'sine', 0.4);
+    this.playTone(330, 'sine', 0.4);
+}
+
+sfxBuy() {
+    this.playTone(440, 'sine', 0.15);
+    setTimeout(() => this.playTone(660, 'sine', 0.15), 80);
+}
+
+sfxCrash() {
+    this.playTone(160, 'triangle', 0.4);
+    setTimeout(() => this.playTone(120, 'triangle', 0.5), 120);
+}
+
+
+
+
+
 }
 
 class GameState {
