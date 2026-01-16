@@ -3,54 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Dev Evolution</title>
+    <title>Dev Evolution Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="game-over-overlay" class="game-over-screen" style="display: none;">
+        <div class="error-box">
+            <h1>:(</h1>
+            <h2>FATAL ERROR: BURNOUT</h2>
+            <p>Your developer has crashed.</p>
+            <button id="btn-reboot" class="reboot-btn">REBOOT SYSTEM</button>
+        </div>
+    </div>
+
     <div class="game-layout">
+        <div class="settings-bar">
+            <button id="btn-sound" class="icon-btn" aria-label="Toggle Sound">🔊</button>
+        </div>
+
         <header class="hud-panel">
             <h1 id="level-display" class="level-title">LVL 1 JUNIOR</h1>
             
-            <div class="stat-row">
-                <div class="stat-info">
-                    <span>XP</span>
-                    <span id="xp-text">0/100</span>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-label">
+                        <span>XP</span>
+                        <span id="xp-text">0 / 100</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill xp-fill" id="xp-bar"></div>
+                    </div>
                 </div>
-                <div class="progress-track">
-                    <div class="progress-fill xp-fill" id="xp-bar"></div>
-                </div>
-            </div>
 
-            <div class="stat-row">
-                <div class="stat-info">
-                    <span>BURNOUT</span>
-                    <span id="stress-text">0%</span>
+                <div class="stat-item">
+                    <div class="stat-label">
+                        <span>BURNOUT</span>
+                        <span id="stress-text">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill stress-fill" id="stress-bar"></div>
+                    </div>
                 </div>
-                <div class="progress-track">
-                    <div class="progress-fill stress-fill" id="stress-bar"></div>
+
+                <div class="stat-item money-item">
+                    <div class="stat-label">
+                        <span>BANK</span>
+                        <span id="money-text">$0</span>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <main class="character-stage">
-            <div id="speech" class="bubble">I broke production...</div>
+        <main class="character-stage" id="click-zone">
+            <div id="speech" class="bubble">Ready to code.</div>
             <div id="avatar" class="emoji-avatar">👶</div>
+            <div id="particles" class="particles-container"></div>
         </main>
 
         <footer class="control-panel">
-            <button id="btn-code" class="big-btn code-btn">
-                <span class="btn-icon">💻</span>
-                <span class="btn-label">CODE</span>
-                <span class="btn-sub">Gain XP (+Stress)</span>
-            </button>
-            <button id="btn-sleep" class="big-btn sleep-btn">
-                <span class="btn-icon">☕</span>
-                <span class="btn-label">REST</span>
-                <span class="btn-sub">Heal Burnout</span>
-            </button>
+            <div class="action-row">
+                <button id="btn-code" class="big-btn code-btn">
+                    <span class="btn-icon">💻</span>
+                    <span class="btn-label">CODE</span>
+                    <span class="btn-sub">+XP / +$$</span>
+                </button>
+                <button id="btn-sleep" class="big-btn sleep-btn">
+                    <span class="btn-icon">☕</span>
+                    <span class="btn-label">REST</span>
+                    <span class="btn-sub">-Stress</span>
+                </button>
+            </div>
+
+            <div class="shop-row">
+                <button id="btn-upgrade-kb" class="shop-btn">
+                    <span class="shop-icon">⌨️</span>
+                    <div class="shop-info">
+                        <span class="shop-name">Mech Keyb.</span>
+                        <span class="shop-cost" id="cost-kb">$50</span>
+                    </div>
+                </button>
+                <button id="btn-upgrade-chair" class="shop-btn">
+                    <span class="shop-icon">🪑</span>
+                    <div class="shop-info">
+                        <span class="shop-name">Ergo Chair</span>
+                        <span class="shop-cost" id="cost-chair">$100</span>
+                    </div>
+                </button>
+            </div>
         </footer>
     </div>
-
+    
     <script src="app.js"></script>
 </body>
 </html>
