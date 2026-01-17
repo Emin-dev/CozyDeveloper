@@ -848,7 +848,7 @@ class UI {
         this.updateTasks();
     }
 
-    updatePowerups() {
+  updatePowerups() {
     Object.values(Config.POWERUPS).forEach(powerup => {
         const btn = document.getElementById(`btn-${powerup.id}`);
         const cost = document.getElementById(`cost-${powerup.id}`);
@@ -860,6 +860,7 @@ class UI {
         const active = this.state.isPowerupActive(powerup.id);
         const canAfford = this.state.money >= this.state.powerupCosts[powerup.id];
         const wasAffordable = this.powerupAffordableState[powerup.id] || false;
+        const hasActiveTimer = this.powerupGlowTimers[powerup.id] !== null && this.powerupGlowTimers[powerup.id] !== undefined;
 
         
         btn.classList.toggle('active', active);
@@ -874,19 +875,15 @@ class UI {
                 this.powerupGlowTimers[powerup.id] = null;
             }
             btn.classList.remove('can-afford');
-        } else if (canAfford && !wasAffordable) {
+        } else if (canAfford && !wasAffordable && !hasActiveTimer) {
             
             btn.classList.add('can-afford');
             this.powerupAffordableState[powerup.id] = true;
 
             
-            if (this.powerupGlowTimers[powerup.id]) {
-                clearTimeout(this.powerupGlowTimers[powerup.id]);
-            }
-
-            
             this.powerupGlowTimers[powerup.id] = setTimeout(() => {
                 btn.classList.remove('can-afford');
+                this.powerupAffordableState[powerup.id] = false;
                 this.powerupGlowTimers[powerup.id] = null;
             }, 10000);
         } else if (!canAfford) {
@@ -911,6 +908,7 @@ class UI {
         }
     });
 }
+
 
 
 
