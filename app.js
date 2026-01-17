@@ -351,7 +351,7 @@ class GameState {
         this.studyCount = 0;
         this.totalMoneyEarned = 0;
         this.activePowerups = {};
-        this.powerupCosts = { autoStress: 100, autoClick: 150, xpBoost: 120, shield: 200 };
+        this.powerupCosts = { autoStress: 100, autoClick: 250, xpBoost: 120, shield: 200 };
         this.powerupAffordableTimestamps = {};
         this.highStressTime = 0;
         this.studyEndTime = 0;
