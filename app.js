@@ -4,11 +4,11 @@ const Config = Object.freeze({
     STRESS_COST: 12,
     STRESS_HEAL: 30,
     REST_COST: 3,
-    STUDY_COST: 75,
+    STUDY_COST: 50,
     STUDY_DURATION: 120000,
     STUDY_MULT: 0.15,
     LEVEL_MULT: 1.5,
-    IDLE_STRESS_REDUCTION: 1,
+    IDLE_STRESS_REDUCTION: 0.15,
 
     DIFFICULTIES: {
         easy: { id: 'easy', label: 'Easy Mode', xpMult: 2.0, stressMult: 0.5, bugChance: 0.01, powerupDuration: 120, studyDuration: 180 },
@@ -125,7 +125,7 @@ class AudioEngine {
         if (!this.ctx) this.init();
         if (!this.enabled || !this.ctx) return;
 
-        // Fix for browser sound policy: resume if suspended
+        
         if (this.ctx.state === 'suspended') {
             this.ctx.resume().catch(() => {});
         }
@@ -922,7 +922,7 @@ class UIController {
             this.haptic.trigger('light');
         }
 
-        // Split directions: XP left, Money right
+        
         this.showFloater(`+${result.xp} XP`, this.elements.avatar, 'xp', -30);
         this.showFloater(`+$${result.money}`, this.elements.avatar, 'money', 30);
 
