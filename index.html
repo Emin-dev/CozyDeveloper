@@ -7,22 +7,28 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-over-overlay" class="game-over-screen" style="display: none;">
+    <div id="bg-layer" class="bg-layer"></div>
+    
+    <div id="game-over-overlay" class="game-over-screen">
         <div class="error-box">
             <h1>:(</h1>
             <h2>FATAL ERROR: BURNOUT</h2>
             <p>Your developer has crashed.</p>
+            <div class="stats-summary">
+                <div>Level Reached: <span id="final-level">1</span></div>
+                <div>Total Codes: <span id="final-codes">0</span></div>
+            </div>
             <button id="btn-reboot" class="reboot-btn">REBOOT SYSTEM</button>
         </div>
     </div>
 
     <div class="game-layout">
         <div class="settings-bar">
-            <button id="btn-sound" class="icon-btn" aria-label="Toggle Sound">🔊</button>
+            <button id="btn-settings" class="icon-btn">⚙️</button>
         </div>
 
         <header class="hud-panel">
-            <h1 id="level-display" class="level-title">LVL 1 JUNIOR</h1>
+            <h1 id="level-display" class="level-title">LVL 1 • Normal</h1>
             
             <div class="stat-grid">
                 <div class="stat-item">
@@ -45,19 +51,30 @@
                     </div>
                 </div>
 
-                <div class="stat-item money-item">
-                    <div class="stat-label">
-                        <span>BANK</span>
-                        <span id="money-text">$0</span>
+                <div class="stat-row">
+                    <div class="stat-item money-item">
+                        <div class="stat-label">
+                            <span>💰</span>
+                            <span id="money-text">$0</span>
+                        </div>
+                    </div>
+                    <div class="stat-item study-item">
+                        <div class="stat-label">
+                            <span>📚</span>
+                            <span id="study-mult">×1.0</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </header>
 
+        <div class="tasks-section">
+            <div id="tasks-list" class="tasks-list"></div>
+        </div>
+
         <main class="character-stage" id="click-zone">
-            <div id="speech" class="bubble">Ready to code.</div>
+            <div id="speech" class="bubble">Ready to code!</div>
             <div id="avatar" class="emoji-avatar">👶</div>
-            <div id="particles" class="particles-container"></div>
         </main>
 
         <footer class="control-panel">
@@ -65,32 +82,92 @@
                 <button id="btn-code" class="big-btn code-btn">
                     <span class="btn-icon">💻</span>
                     <span class="btn-label">CODE</span>
-                    <span class="btn-sub">+XP / +$$</span>
                 </button>
-                <button id="btn-sleep" class="big-btn sleep-btn">
+                <button id="btn-rest" class="big-btn rest-btn">
                     <span class="btn-icon">☕</span>
                     <span class="btn-label">REST</span>
-                    <span class="btn-sub">-Stress</span>
+                </button>
+                <button id="btn-study" class="big-btn study-btn">
+                    <span class="btn-icon">📚</span>
+                    <span class="btn-label">STUDY</span>
                 </button>
             </div>
 
-            <div class="shop-row">
-                <button id="btn-upgrade-kb" class="shop-btn">
-                    <span class="shop-icon">⌨️</span>
-                    <div class="shop-info">
-                        <span class="shop-name">Mech Keyb.</span>
-                        <span class="shop-cost" id="cost-kb">$50</span>
+            <div class="powerup-grid">
+                <button id="btn-autoStress" class="powerup-btn">
+                    <div class="powerup-header">
+                        <span class="powerup-icon">🧘</span>
+                        <span class="powerup-timer" id="timer-autoStress"></span>
+                    </div>
+                    <div class="powerup-info">
+                        <span class="powerup-name">Auto Rest</span>
+                        <span class="powerup-cost" id="cost-autoStress">$100</span>
                     </div>
                 </button>
-                <button id="btn-upgrade-chair" class="shop-btn">
-                    <span class="shop-icon">🪑</span>
-                    <div class="shop-info">
-                        <span class="shop-name">Ergo Chair</span>
-                        <span class="shop-cost" id="cost-chair">$100</span>
+                <button id="btn-autoClick" class="powerup-btn">
+                    <div class="powerup-header">
+                        <span class="powerup-icon">🤖</span>
+                        <span class="powerup-timer" id="timer-autoClick"></span>
+                    </div>
+                    <div class="powerup-info">
+                        <span class="powerup-name">Auto Code</span>
+                        <span class="powerup-cost" id="cost-autoClick">$150</span>
+                    </div>
+                </button>
+                <button id="btn-xpBoost" class="powerup-btn">
+                    <div class="powerup-header">
+                        <span class="powerup-icon">⚡</span>
+                        <span class="powerup-timer" id="timer-xpBoost"></span>
+                    </div>
+                    <div class="powerup-info">
+                        <span class="powerup-name">XP Boost</span>
+                        <span class="powerup-cost" id="cost-xpBoost">$120</span>
+                    </div>
+                </button>
+                <button id="btn-shield" class="powerup-btn">
+                    <div class="powerup-header">
+                        <span class="powerup-icon">🛡️</span>
+                        <span class="powerup-timer" id="timer-shield"></span>
+                    </div>
+                    <div class="powerup-info">
+                        <span class="powerup-name">Shield</span>
+                        <span class="powerup-cost" id="cost-shield">$200</span>
                     </div>
                 </button>
             </div>
         </footer>
+    </div>
+
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="btn-close-settings" class="icon-btn">✕</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>Audio & Haptics</h3>
+                <div class="toggle-group">
+                    <button id="btn-sound" class="toggle-btn">🔊 Sound</button>
+                    <button id="btn-haptic" class="toggle-btn">📳 Vibration</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Difficulty</h3>
+                <div id="diff-options" class="options-grid"></div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Avatar Theme</h3>
+                <div id="avatar-options" class="options-grid"></div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Background</h3>
+                <div id="bg-options" class="options-grid"></div>
+            </div>
+        </div>
     </div>
     
     <script src="app.js"></script>
