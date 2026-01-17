@@ -143,6 +143,16 @@ body {
   animation: shake-heavy 1s;
 }
 
+@keyframes highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+    border-color: rgba(59, 130, 246, 0.7);
+  }
+}
 .game-layout {
   display: flex;
   flex-direction: column;
@@ -542,6 +552,11 @@ body {
   background: rgba(59, 130, 246, 0.15);
   border-color: rgba(59, 130, 246, 0.4);
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+}
+.powerup-btn.newly-affordable {
+  animation: highlight-pulse 2s ease-in-out 5;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
 }
 .powerup-btn.active {
   background: rgba(59, 130, 246, 0.3);

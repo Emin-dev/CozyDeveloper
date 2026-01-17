@@ -8,7 +8,7 @@ const Config = Object.freeze({
     STUDY_DURATION: 120000,
     STUDY_MULT: 0.15,
     LEVEL_MULT: 1.5,
-    IDLE_STRESS_REDUCTION: 1,
+    IDLE_STRESS_REDUCTION: 0.15,
 
     DIFFICULTIES: {
         easy: { id: 'easy', label: 'Easy Mode', xpMult: 2.0, stressMult: 0.5, bugChance: 0.01, powerupDuration: 120, studyDuration: 180 },
@@ -310,6 +310,7 @@ class GameState {
     constructor(bus) {
         this.bus = bus;
         this.taskGenerator = new TaskGenerator();
+        this.powerupAffordableTimestamps = {};
         this.reset();
     }
 
@@ -333,6 +334,7 @@ class GameState {
         this.totalMoneyEarned = 0;
         this.activePowerups = {};
         this.powerupCosts = { autoStress: 100, autoClick: 150, xpBoost: 120, shield: 200 };
+        this.powerupAffordableTimestamps = {};
         this.highStressTime = 0;
         this.studyEndTime = 0;
         this.lastActionTime = Date.now();
@@ -550,6 +552,7 @@ class GameState {
         this.completedTasks = new Set(data.completedTasks || []);
         this.isGameOver = false;
         this.activePowerups = {};
+        this.powerupAffordableTimestamps = {};
         this.studyEndTime = 0;
         this.lastActionTime = Date.now();
         this.updateTasks();
@@ -714,18 +717,13 @@ class AvatarDragController {
         this.isDragging = true;
         this.avatar.classList.add('dragging');
 
-        const rect = this.avatar.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-
-        this.originalX = centerX;
-        this.originalY = centerY;
-
         const touch = e.touches ? e.touches[0] : e;
         this.startX = touch.clientX;
         this.startY = touch.clientY;
 
-        this.haptic.trigger('light');
+        const rect = this.avatar.getBoundingClientRect();
+        this.originalX = rect.left + rect.width / 2;
+        this.originalY = rect.top + rect.height / 2;
     }
 
     onMove(e) {
@@ -733,566 +731,425 @@ class AvatarDragController {
         e.preventDefault();
 
         const touch = e.touches ? e.touches[0] : e;
-        this.currentX = touch.clientX - this.startX;
-        this.currentY = touch.clientY - this.startY;
+        this.currentX = touch.clientX;
+        this.currentY = touch.clientY;
 
-        this.avatar.style.transform = `translate(${this.currentX}px, ${this.currentY}px)`;
+        const deltaX = this.currentX - this.startX;
+        const deltaY = this.currentY - this.startY;
+
+        this.avatar.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
     }
 
     onEnd(e) {
         if (!this.isDragging) return;
-
         this.isDragging = false;
         this.avatar.classList.remove('dragging');
 
-        this.avatar.style.transition = 'transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-        this.avatar.style.transform = 'translate(0, 0)';
-
-        setTimeout(() => {
-            this.avatar.style.transition = '';
-        }, 500);
-
-        this.haptic.trigger('medium');
+        this.avatar.style.transform = '';
+        this.haptic.trigger('light');
     }
 }
 
-class UI {
+class UIController {
     constructor(state, bus, audio, haptic) {
         this.state = state;
         this.bus = bus;
         this.audio = audio;
         this.haptic = haptic;
-        this.settingsOpen = false;
-        this.toastQueue = [];
-        this.powerupGlowTimers = {};
-        this.powerupAffordableState = {};
-        this.cacheElements();
-        this.setupListeners();
-        this.dragController = null;
-    }
 
-
-
-    cacheElements() {
-        this.els = {
-            xpBar: document.getElementById('xp-bar'),
+        this.elements = {
+            level: document.getElementById('level-display'),
             xpText: document.getElementById('xp-text'),
-            stressBar: document.getElementById('stress-bar'),
+            xpBar: document.getElementById('xp-bar'),
             stressText: document.getElementById('stress-text'),
+            stressBar: document.getElementById('stress-bar'),
             moneyText: document.getElementById('money-text'),
-            levelText: document.getElementById('level-display'),
+            studyMult: document.getElementById('study-mult'),
             avatar: document.getElementById('avatar'),
-            clickZone: document.getElementById('click-zone'),
-            gameOverScreen: document.getElementById('game-over-overlay'),
-            settingsPanel: document.getElementById('settings-panel'),
+            speech: document.getElementById('speech'),
             tasksList: document.getElementById('tasks-list'),
             bgLayer: document.getElementById('bg-layer'),
-            studyMultText: document.getElementById('study-mult'),
-            speech: document.getElementById('speech')
+            btnCode: document.getElementById('btn-code'),
+            btnRest: document.getElementById('btn-rest'),
+            btnStudy: document.getElementById('btn-study')
         };
+
+        this.init();
+        this.render();
+        setInterval(() => this.render(), 100);
     }
 
-    setupListeners() {
-        this.bus.on('levelUp', data => this.onLevelUp(data));
-        this.bus.on('gameOver', data => this.onGameOver(data));
-        this.bus.on('taskComplete', task => this.onTaskComplete(task));
-        this.bus.on('bugEat', () => this.onBugEat());
-        this.bus.on('powerupActivated', data => this.onPowerupActivated(data));
-        this.bus.on('render', () => this.render());
+    init() {
+        this.elements.btnCode.addEventListener('click', () => this.handleCode());
+        this.elements.btnRest.addEventListener('click', () => this.handleRest());
+        this.elements.btnStudy.addEventListener('click', () => this.handleStudy());
 
-        this.dragController = new AvatarDragController(this.els.avatar, this.bus, this.haptic);
+        Object.keys(Config.POWERUPS).forEach(type => {
+            const btn = document.getElementById(`btn-${type}`);
+            btn.addEventListener('click', () => this.handlePowerup(type));
+        });
+
+        document.getElementById('btn-settings').addEventListener('click', () => {
+            document.getElementById('settings-panel').classList.add('open');
+            this.audio.sfxUIClick();
+        });
+
+        document.getElementById('btn-close-settings').addEventListener('click', () => {
+            document.getElementById('settings-panel').classList.remove('open');
+            this.audio.sfxUIClick();
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', () => {
+            this.audio.toggle();
+            this.audio.sfxUIClick();
+        });
+
+        document.getElementById('btn-haptic').addEventListener('click', () => {
+            this.haptic.toggle();
+            this.haptic.trigger('light');
+        });
+
+        document.getElementById('btn-reboot').addEventListener('click', () => {
+            this.handleReboot();
+        });
+
+        this.setupSettings();
+
+        this.bus.on('levelUp', (data) => this.onLevelUp(data));
+        this.bus.on('gameOver', (data) => this.onGameOver(data));
+        this.bus.on('taskComplete', (task) => this.onTaskComplete(task));
+        this.bus.on('autoCode', () => this.handleCode(true));
+        this.bus.on('powerupActivated', (data) => this.onPowerupActivated(data));
     }
 
-    render() {
-        if (this.state.isGameOver) {
-            this.els.gameOverScreen.style.display = 'flex';
-            document.getElementById('final-level').innerText = this.state.level;
-            document.getElementById('final-codes').innerText = this.state.codeClicks;
-            return;
-        }
+    setupSettings() {
+        const diffOptions = document.getElementById('diff-options');
+        Object.values(Config.DIFFICULTIES).forEach(diff => {
+            const btn = document.createElement('button');
+            btn.className = 'setting-option';
+            btn.textContent = diff.label;
+            btn.addEventListener('click', () => {
+                this.state.difficultyId = diff.id;
+                this.updateSettingsUI();
+                this.audio.sfxUIClick();
+            });
+            diffOptions.appendChild(btn);
+        });
 
-        this.els.gameOverScreen.style.display = 'none';
+        const avatarOptions = document.getElementById('avatar-options');
+        Object.values(Config.AVATAR_SETS).forEach(set => {
+            const btn = document.createElement('button');
+            btn.className = 'setting-option';
+            btn.textContent = set.label;
+            btn.addEventListener('click', () => {
+                this.state.avatarSetId = set.id;
+                this.updateSettingsUI();
+                this.render();
+                this.audio.sfxUIClick();
+            });
+            avatarOptions.appendChild(btn);
+        });
 
-        const xpPct = (this.state.xp / this.state.xpMax) * 100;
-        this.els.xpBar.style.width = `${xpPct}%`;
-        this.els.stressBar.style.width = `${this.state.stress}%`;
+        const bgOptions = document.getElementById('bg-options');
+        Config.BACKGROUNDS.forEach(bg => {
+            const btn = document.createElement('button');
+            btn.className = 'setting-option bg';
+            btn.style.background = `linear-gradient(135deg, ${bg.colors[0]}, ${bg.colors[1]})`;
+            btn.addEventListener('click', () => {
+                this.state.backgroundId = bg.id;
+                this.updateSettingsUI();
+                this.updateBackground();
+                this.audio.sfxUIClick();
+            });
+            bgOptions.appendChild(btn);
+        });
 
-        const mood = this.state.getMood();
-        if (mood === 'panic') {
-            this.els.stressBar.style.background = '#ef4444';
-            this.els.avatar.style.animation = 'shake 0.3s infinite';
-        } else if (mood === 'stressed') {
-            this.els.stressBar.style.background = '#f59e0b';
-            this.els.avatar.style.animation = 'shake 0.6s infinite';
-        } else {
-            this.els.stressBar.style.background = '#10b981';
-            this.els.avatar.style.animation = 'none';
-        }
-
-        this.els.levelText.innerText = `LVL ${this.state.level} • ${this.state.getDifficulty().label}`;
-        this.els.xpText.innerText = `${this.state.xp} / ${this.state.xpMax}`;
-        this.els.stressText.innerText = `${Math.floor(this.state.stress)}%`;
-        this.els.moneyText.innerText = `$${this.state.money}`;
-        this.els.avatar.innerText = this.state.getCurrentAvatar();
-
-        const studyActive = this.state.isStudyActive();
-        if (studyActive) {
-            const remaining = Math.ceil((this.state.studyEndTime - Date.now()) / 1000);
-            this.els.studyMultText.innerText = `×${this.state.studyMultiplier.toFixed(1)} (${remaining}s)`;
-        } else {
-            this.els.studyMultText.innerText = `×${this.state.studyMultiplier.toFixed(1)}`;
-        }
-
-        this.updatePowerups();
-        this.updateBackground();
-        this.updateTasks();
+        this.updateSettingsUI();
     }
 
-  updatePowerups() {
-    Object.values(Config.POWERUPS).forEach(powerup => {
-        const btn = document.getElementById(`btn-${powerup.id}`);
-        const cost = document.getElementById(`cost-${powerup.id}`);
-        const timer = document.getElementById(`timer-${powerup.id}`);
+    updateSettingsUI() {
+        document.querySelectorAll('#diff-options .setting-option').forEach((btn, i) => {
+            const diff = Object.values(Config.DIFFICULTIES)[i];
+            btn.classList.toggle('active', diff.id === this.state.difficultyId);
+        });
 
-        if (!btn || !cost) return;
+        document.querySelectorAll('#avatar-options .setting-option').forEach((btn, i) => {
+            const set = Object.values(Config.AVATAR_SETS)[i];
+            btn.classList.toggle('active', set.id === this.state.avatarSetId);
+        });
 
-        cost.innerText = `$${this.state.powerupCosts[powerup.id]}`;
-        const active = this.state.isPowerupActive(powerup.id);
-        const canAfford = this.state.money >= this.state.powerupCosts[powerup.id];
-        const wasAffordable = this.powerupAffordableState[powerup.id] || false;
-        const hasActiveTimer = this.powerupGlowTimers[powerup.id] !== null && this.powerupGlowTimers[powerup.id] !== undefined;
-
-        
-        btn.classList.toggle('active', active);
-        btn.classList.toggle('disabled', !active && !canAfford);
-
-        
-        if (active) {
-            
-            this.powerupAffordableState[powerup.id] = false;
-            if (this.powerupGlowTimers[powerup.id]) {
-                clearTimeout(this.powerupGlowTimers[powerup.id]);
-                this.powerupGlowTimers[powerup.id] = null;
-            }
-            btn.classList.remove('can-afford');
-        } else if (canAfford && !wasAffordable && !hasActiveTimer) {
-            
-            btn.classList.add('can-afford');
-            this.powerupAffordableState[powerup.id] = true;
-
-            
-            this.powerupGlowTimers[powerup.id] = setTimeout(() => {
-                btn.classList.remove('can-afford');
-                this.powerupAffordableState[powerup.id] = false;
-                this.powerupGlowTimers[powerup.id] = null;
-            }, 10000);
-        } else if (!canAfford) {
-            
-            this.powerupAffordableState[powerup.id] = false;
-            if (this.powerupGlowTimers[powerup.id]) {
-                clearTimeout(this.powerupGlowTimers[powerup.id]);
-                this.powerupGlowTimers[powerup.id] = null;
-            }
-            btn.classList.remove('can-afford');
-        }
-
-        
-        if (timer) {
-            if (active) {
-                const remaining = Math.ceil((this.state.activePowerups[powerup.id] - Date.now()) / 1000);
-                timer.innerText = `${remaining}s`;
-                timer.style.display = 'block';
-            } else {
-                timer.style.display = 'none';
-            }
-        }
-    });
-}
-
-
-
-
-    updateBackground() {
-        const bg = this.state.getBackground();
-        this.els.bgLayer.style.background = `linear-gradient(135deg, ${bg.colors[0]}, ${bg.colors[1]})`;
-    }
-
-    updateTasks() {
-        if (!this.els.tasksList) return;
-
-        this.els.tasksList.innerHTML = '';
-        this.state.currentTasks.forEach(task => {
-            const div = document.createElement('div');
-            div.className = 'task-item';
-            const reward = task.reward.money ? `+$${task.reward.money}` : `+${task.reward.xp}XP`;
-            div.innerHTML = `
-                <span class="task-icon">○</span>
-                <span class="task-text">${task.desc}</span>
-                <span class="task-reward">${reward}</span>
-            `;
-            this.els.tasksList.appendChild(div);
+        document.querySelectorAll('#bg-options .setting-option').forEach((btn, i) => {
+            const bg = Config.BACKGROUNDS[i];
+            btn.classList.toggle('active', bg.id === this.state.backgroundId);
         });
     }
 
-    toggleSettings() {
-        this.settingsOpen = !this.settingsOpen;
-        this.els.settingsPanel.classList.toggle('open', this.settingsOpen);
-        if (this.settingsOpen) {
-            this.renderSettings();
+    handleCode(isAuto = false) {
+        if (this.state.isGameOver) return;
+
+        const result = this.state.code();
+        if (!result) return;
+
+        if (result.gameOver) return;
+
+        if (!isAuto) {
+            this.audio.sfxClick();
+            this.haptic.trigger('light');
+        }
+
+        this.showFloater(`+${result.xp} XP`, this.elements.avatar, '#3b82f6');
+        this.showFloater(`+$${result.money}`, this.elements.avatar, '#f59e0b');
+
+        if (result.efficiency < 1) {
+            this.showSpeech('Stressed! Lower efficiency!', 2000);
+        }
+
+        this.render();
+    }
+
+    handleRest() {
+        if (this.state.rest()) {
+            this.audio.sfxRest();
+            this.haptic.trigger('medium');
+            this.showSpeech('Feeling better! ☕', 1500);
+            this.showFloater('-30 Burnout', this.elements.avatar, '#10b981');
+            this.render();
         }
     }
 
-    renderSettings() {
-        const diffPanel = document.getElementById('diff-options');
-        const avatarPanel = document.getElementById('avatar-options');
-        const bgPanel = document.getElementById('bg-options');
-
-        if (diffPanel) {
-            diffPanel.innerHTML = '';
-            Object.values(Config.DIFFICULTIES).forEach(diff => {
-                const btn = document.createElement('button');
-                btn.className = `setting-option ${diff.id === this.state.difficultyId ? 'active' : ''}`;
-                btn.innerText = diff.label;
-                btn.onclick = () => {
-                    this.audio.sfxUIClick();
-                    this.haptic.trigger('light');
-                    this.state.difficultyId = diff.id;
-                    this.showToast(`Difficulty: ${diff.label}`, 'info');
-                    this.renderSettings();
-                    this.render();
-                    this.bus.emit('save');
-                };
-                diffPanel.appendChild(btn);
-            });
-        }
-
-        if (avatarPanel) {
-            avatarPanel.innerHTML = '';
-            Object.values(Config.AVATAR_SETS).forEach(set => {
-                const btn = document.createElement('button');
-                btn.className = `setting-option ${set.id === this.state.avatarSetId ? 'active' : ''}`;
-                btn.innerText = set.emojis[0];
-                btn.title = set.label;
-                btn.onclick = () => {
-                    this.audio.sfxUIClick();
-                    this.haptic.trigger('light');
-                    this.state.avatarSetId = set.id;
-                    this.showToast(`Avatar: ${set.label}`, 'info');
-                    this.renderSettings();
-                    this.render();
-                    this.bus.emit('save');
-                };
-                avatarPanel.appendChild(btn);
-            });
-        }
-
-        if (bgPanel) {
-            bgPanel.innerHTML = '';
-            Config.BACKGROUNDS.forEach(bg => {
-                const btn = document.createElement('button');
-                btn.className = `setting-option bg ${bg.id === this.state.backgroundId ? 'active' : ''}`;
-                btn.style.background = `linear-gradient(135deg, ${bg.colors[0]}, ${bg.colors[1]})`;
-                btn.title = bg.label;
-                btn.onclick = () => {
-                    this.audio.sfxUIClick();
-                    this.haptic.trigger('light');
-                    this.state.backgroundId = bg.id;
-                    this.showToast(`Theme: ${bg.label}`, 'info');
-                    this.renderSettings();
-                    this.render();
-                    this.bus.emit('save');
-                };
-                bgPanel.appendChild(btn);
-            });
+    handleStudy() {
+        const result = this.state.study();
+        if (result) {
+            this.audio.sfxStudy();
+            this.haptic.trigger('medium');
+            this.showSpeech(`Studying! Multiplier: ${result.newMult.toFixed(1)}×`, 2000);
+            this.render();
         }
     }
 
-    spawnFloater(text, color, x, y) {
-        const el = document.createElement('div');
-        el.className = 'floater';
-        el.innerText = text;
-        el.style.color = color;
-        const randomX = (Math.random() - 0.5) * 40;
-        el.style.left = `${x + randomX}px`;
-        el.style.top = `${y}px`;
-        this.els.clickZone.appendChild(el);
-        setTimeout(() => el.remove(), 800);
+    handlePowerup(type) {
+        if (this.state.activatePowerup(type)) {
+            this.audio.sfxBuy();
+            this.haptic.trigger('success');
+            this.showToast(`${Config.POWERUPS[type].name} activated!`, 'success');
+            this.render();
+        }
     }
 
-    showToast(text, type = 'info') {
-        if (!this.toastQueue) this.toastQueue = [];
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.innerText = text;
-
-        const position = this.toastQueue.length;
-        const topOffset = 60 + (position * 60);
-
-        toast.style.top = `${topOffset}px`;
-        document.body.appendChild(toast);
-
-        this.toastQueue.push(toast);
-
-        setTimeout(() => toast.classList.add('show'), 100);
-
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                toast.remove();
-                const index = this.toastQueue.indexOf(toast);
-                if (index > -1) {
-                    this.toastQueue.splice(index, 1);
-                    this.repositionToasts();
-                }
-            }, 300);
-        }, 2500);
+    onPowerupActivated(data) {
+        const duration = data.duration / 1000;
+        this.updatePowerupTimer(data.type, duration);
     }
 
-    repositionToasts() {
-        this.toastQueue.forEach((toast, index) => {
-            const newTop = 60 + (index * 60);
-            toast.style.top = `${newTop}px`;
-        });
+    updatePowerupTimer(type, remainingSeconds) {
+        const timerEl = document.getElementById(`timer-${type}`);
+        if (remainingSeconds > 0) {
+            timerEl.style.display = 'block';
+            timerEl.textContent = `${Math.ceil(remainingSeconds)}s`;
+        } else {
+            timerEl.style.display = 'none';
+        }
     }
 
-
-    showSpeech(text, duration = 2000) {
-        this.els.speech.innerText = text;
-        this.els.speech.classList.add('show');
-        setTimeout(() => this.els.speech.classList.remove('show'), duration);
+    handleReboot() {
+        this.state.reset();
+        document.getElementById('game-over-overlay').style.display = 'none';
+        this.audio.sfxUIClick();
+        this.render();
     }
 
     onLevelUp(data) {
         this.audio.sfxLevelUp(data.level);
         this.haptic.trigger('success');
-
-        this.showToast(`🎉 Level ${data.level} Reached!`, 'success');
+        this.showSpeech(`LEVEL UP! Now Level ${data.level}!`, 3000);
         this.showCelebration();
-
-        const messages = [
-            'Level up! Avatar evolved!',
-            'You\'re growing stronger!',
-            'Great progress!',
-            'Keep climbing!',
-            'Unstoppable!'
-        ];
-        this.showSpeech(messages[Math.floor(Math.random() * messages.length)]);
-    }
-
-    showCelebration() {
-        const clickZone = this.els.clickZone;
-        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
-
-        for (let i = 0; i < 15; i++) {
-            setTimeout(() => {
-                const particle = document.createElement('div');
-                particle.className = 'celebration-particle';
-                particle.innerText = ['✨', '🎉', '⭐', '💫'][Math.floor(Math.random() * 4)];
-                particle.style.left = `${Math.random() * 100}%`;
-                particle.style.top = `${Math.random() * 100}%`;
-                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                clickZone.appendChild(particle);
-                setTimeout(() => particle.remove(), 2000);
-            }, i * 100);
-        }
+        this.render();
     }
 
     onGameOver(data) {
-        const intensity = Math.min(data.level, 10);
-        this.audio.sfxCrash(intensity);
+        this.audio.sfxCrash(data.level);
+        this.haptic.trigger('error');
+        
+        const overlay = document.getElementById('game-over-overlay');
+        document.getElementById('final-level').textContent = data.level;
+        document.getElementById('final-codes').textContent = this.state.codeClicks;
+        overlay.style.display = 'flex';
 
-        const shakeClass = intensity < 5 ? 'shake-light' : intensity < 8 ? 'shake-medium' : 'shake-heavy';
-        this.els.gameOverScreen.classList.add(shakeClass);
-        setTimeout(() => this.els.gameOverScreen.classList.remove(shakeClass), 1000);
-
-        const vibPattern = intensity < 5 ? [100] : intensity < 8 ? [100, 50, 100] : [100, 50, 100, 50, 200];
-        if (window.navigator && window.navigator.vibrate) {
-            window.navigator.vibrate(vibPattern);
-        }
+        const body = document.body;
+        body.classList.add('shake-heavy');
+        setTimeout(() => body.classList.remove('shake-heavy'), 1000);
     }
 
     onTaskComplete(task) {
         this.audio.sfxTask();
         this.haptic.trigger('success');
-        this.showToast(`✓ ${task.desc}`, 'success');
-        this.updateTasks();
-    }
-
-    onBugEat() {
-        this.showSpeech('🐛 Bug eating progress!', 1500);
+        this.showToast(`Task Complete! +$${task.reward.money}`, 'success');
         this.render();
     }
 
-    onPowerupActivated(data) {
-        const powerup = Config.POWERUPS[data.type];
-        this.showToast(`${powerup.icon} ${powerup.name} activated!`, 'info');
+    render() {
+        this.state.updateIdleStress();
+
+        const diff = this.state.getDifficulty();
+        this.elements.level.textContent = `LVL ${this.state.level} • ${diff.label}`;
+
+        this.elements.xpText.textContent = `${this.state.xp} / ${this.state.xpMax}`;
+        this.elements.xpBar.style.width = `${(this.state.xp / this.state.xpMax) * 100}%`;
+
+        this.elements.stressText.textContent = `${Math.floor(this.state.stress)}%`;
+        this.elements.stressBar.style.width = `${this.state.stress}%`;
+
+        if (this.state.stress < 30) {
+            this.elements.stressBar.style.background = '#10b981';
+        } else if (this.state.stress < 60) {
+            this.elements.stressBar.style.background = '#f59e0b';
+        } else {
+            this.elements.stressBar.style.background = '#ef4444';
+        }
+
+        this.elements.moneyText.textContent = `$${this.state.money}`;
+        this.elements.studyMult.textContent = `×${this.state.studyMultiplier.toFixed(1)}`;
+
+        this.elements.avatar.textContent = this.state.getCurrentAvatar();
+
+        this.renderTasks();
+        this.renderPowerups();
+        this.updateBackground();
     }
-}
 
-class SaveManager {
-    constructor(state, bus) {
-        this.state = state;
-        this.bus = bus;
-        this.key = 'emindev_save_v4';
-
-        bus.on('save', () => this.save());
-        setInterval(() => this.save(), 30000);
+    renderTasks() {
+        this.elements.tasksList.innerHTML = '';
+        this.state.currentTasks.forEach(task => {
+            const taskEl = document.createElement('div');
+            taskEl.className = 'task-item';
+            taskEl.innerHTML = `
+                <span class="task-icon">🎯</span>
+                <span class="task-text">${task.desc}</span>
+                <span class="task-reward">+$${task.reward.money}</span>
+            `;
+            this.elements.tasksList.appendChild(taskEl);
+        });
     }
 
-    save() {
-        try {
-            localStorage.setItem(this.key, JSON.stringify(this.state.serialize()));
-        } catch (e) { }
-    }
+    renderPowerups() {
+        Object.keys(Config.POWERUPS).forEach(type => {
+            const btn = document.getElementById(`btn-${type}`);
+            const cost = this.state.powerupCosts[type];
+            const canAfford = this.state.money >= cost;
+            const isActive = this.state.isPowerupActive(type);
 
-    load() {
-        try {
-            const data = localStorage.getItem(this.key);
-            if (data) {
-                this.state.deserialize(JSON.parse(data));
-                return true;
+            document.getElementById(`cost-${type}`).textContent = `$${cost}`;
+
+            btn.classList.remove('disabled', 'can-afford', 'newly-affordable');
+
+            if (isActive) {
+                btn.classList.add('active');
+                const remaining = (this.state.activePowerups[type] - Date.now()) / 1000;
+                this.updatePowerupTimer(type, remaining);
+            } else {
+                btn.classList.remove('active');
+                document.getElementById(`timer-${type}`).style.display = 'none';
             }
-        } catch (e) { }
-        return false;
+
+            if (canAfford && !isActive) {
+                btn.classList.add('can-afford');
+
+                if (!this.state.powerupAffordableTimestamps[type]) {
+                    this.state.powerupAffordableTimestamps[type] = Date.now();
+                    btn.classList.add('newly-affordable');
+
+                    setTimeout(() => {
+                        btn.classList.remove('newly-affordable');
+                    }, 10000);
+                } else {
+                    const timeSinceAffordable = Date.now() - this.state.powerupAffordableTimestamps[type];
+                    if (timeSinceAffordable < 10000) {
+                        btn.classList.add('newly-affordable');
+                    }
+                }
+            } else if (!canAfford) {
+                btn.classList.add('disabled');
+                delete this.state.powerupAffordableTimestamps[type];
+            }
+        });
     }
 
-    clear() {
-        try {
-            localStorage.removeItem(this.key);
-        } catch (e) { }
+    updateBackground() {
+        const bg = this.state.getBackground();
+        this.elements.bgLayer.style.background = `linear-gradient(135deg, ${bg.colors[0]}, ${bg.colors[1]})`;
+    }
+
+    showSpeech(text, duration = 2000) {
+        this.elements.speech.textContent = text;
+        this.elements.speech.classList.add('show');
+        setTimeout(() => {
+            this.elements.speech.classList.remove('show');
+        }, duration);
+    }
+
+    showFloater(text, target, color) {
+        const floater = document.createElement('div');
+        floater.className = 'floater';
+        floater.textContent = text;
+        floater.style.color = color;
+
+        const rect = target.getBoundingClientRect();
+        floater.style.left = `${rect.left + rect.width / 2}px`;
+        floater.style.top = `${rect.top}px`;
+
+        document.body.appendChild(floater);
+
+        setTimeout(() => floater.remove(), 800);
+    }
+
+    showCelebration() {
+        const emojis = ['🎉', '✨', '🌟', '⭐', '💫'];
+        for (let i = 0; i < 8; i++) {
+            setTimeout(() => {
+                const particle = document.createElement('div');
+                particle.className = 'celebration-particle';
+                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+                const rect = this.elements.avatar.getBoundingClientRect();
+                particle.style.left = `${rect.left + rect.width / 2}px`;
+                particle.style.top = `${rect.top + rect.height / 2}px`;
+
+                const tx = (Math.random() - 0.5) * 200;
+                const ty = -Math.random() * 150 - 50;
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+
+                document.body.appendChild(particle);
+
+                setTimeout(() => particle.remove(), 2000);
+            }, i * 100);
+        }
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 }
+
 
 const bus = new EventBus();
 const audio = new AudioEngine();
 const haptic = new HapticEngine();
 const state = new GameState(bus);
-const ui = new UI(state, bus, audio, haptic);
-const saveManager = new SaveManager(state, bus);
 const bugController = new BugController(state, bus, audio, haptic);
 const powerupManager = new PowerupManager(state, bus);
+const ui = new UIController(state, bus, audio, haptic);
+const avatarDrag = new AvatarDragController(document.getElementById('avatar'), bus, haptic);
 
-let locked = false;
 
-function handleCode(e) {
-    if (locked || state.isGameOver) return;
-    locked = true;
-    setTimeout(() => locked = false, 100);
-
-    audio.init();
-    const result = state.code();
-
-    if (result && !result.gameOver) {
-        audio.sfxClick();
-        haptic.trigger('light');
-
-        const rect = ui.els.avatar.getBoundingClientRect();
-        const xpText = result.efficiency < 1 ? `+${result.xp} XP ⚠️` : `+${result.xp} XP`;
-        const color = result.efficiency < 1 ? '#f87171' : '#3b82f6';
-
-        ui.spawnFloater(xpText, color, rect.left + 30, rect.top);
-        ui.spawnFloater(`+$${result.money}`, '#f59e0b', rect.left + 60, rect.top + 20);
-    }
-
-    ui.render();
-    bus.emit('save');
-}
-
-function handleRest() {
-    if (state.isGameOver) return;
-    const success = state.rest();
-    if (success) {
-        audio.init();
-        audio.sfxRest();
-        haptic.trigger('light');
-        ui.showSpeech(`Resting... (-$${Config.REST_COST})`, 1500);
-        ui.render();
-        bus.emit('save');
-    } else {
-        ui.showToast('Need $3 to rest!', 'info');
-    }
-}
-
-function handleStudy() {
-    if (state.isGameOver) return;
-    const result = state.study();
-    if (result) {
-        audio.init();
-        audio.sfxStudy();
-        haptic.trigger('medium');
-        ui.showToast(`Study boost! ×${result.newMult.toFixed(1)} for ${Math.floor(result.duration / 1000)}s`, 'info');
-        ui.render();
-        bus.emit('save');
-    } else {
-        ui.showToast(`Need $${Config.STUDY_COST} to study!`, 'info');
-    }
-}
-
-function handlePowerup(type) {
-    if (state.activatePowerup(type)) {
-        audio.init();
-        audio.sfxBuy();
-        haptic.trigger('medium');
-    }
-    ui.render();
-    bus.emit('save');
-}
-
-function handleReboot() {
-    saveManager.clear();
-    state.reset();
-    ui.render();
-    ui.showToast('System rebooted', 'info');
-}
-
-bus.on('autoCode', () => {
-    const result = state.code();
-    if (result && !result.gameOver) {
-        ui.render();
-    }
-});
-
-setInterval(() => {
-    if (!state.isGameOver) {
-        state.updateIdleStress();
-        ui.render();
-    }
-}, 2000);
-
-document.addEventListener('DOMContentLoaded', () => {
-    saveManager.load();
-    ui.render();
-
-    setInterval(() => ui.updatePowerups(), 500);
-
-    document.getElementById('btn-code').addEventListener('touchstart', e => { e.preventDefault(); handleCode(e); });
-    document.getElementById('btn-code').addEventListener('click', handleCode);
-    document.getElementById('btn-rest').addEventListener('click', handleRest);
-    document.getElementById('btn-study').addEventListener('click', handleStudy);
-
-    Object.values(Config.POWERUPS).forEach(powerup => {
-        const btn = document.getElementById(`btn-${powerup.id}`);
-        if (btn) btn.addEventListener('click', () => handlePowerup(powerup.id));
-    });
-
-    document.getElementById('btn-settings').addEventListener('click', () => ui.toggleSettings());
-    document.getElementById('btn-close-settings').addEventListener('click', () => ui.toggleSettings());
-
-    document.getElementById('btn-sound').addEventListener('click', e => {
-        audio.init();
-        const isOn = audio.toggle();
-        e.target.innerText = isOn ? '🔊 Sound' : '🔇 Sound';
-        haptic.trigger('light');
-        ui.showToast(isOn ? 'Sound enabled' : 'Sound disabled', 'info');
-    });
-
-    document.getElementById('btn-haptic').addEventListener('click', e => {
-        const isOn = haptic.toggle();
-        e.target.innerText = isOn ? '📳 Vibration' : '🔕 Vibration';
-        if (isOn) haptic.trigger('medium');
-        ui.showToast(isOn ? 'Vibration enabled' : 'Vibration disabled', 'info');
-    });
-
-    document.getElementById('btn-reboot').addEventListener('click', handleReboot);
-});
+document.body.addEventListener('touchstart', () => audio.init(), { once: true });
+document.body.addEventListener('click', () => audio.init(), { once: true });
