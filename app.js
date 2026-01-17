@@ -60,9 +60,9 @@ const Config = Object.freeze({
             id: 'autoClick',
             name: 'Auto Code',
             icon: '🤖',
-            baseCost: 150,
-            desc: 'Auto codes every 4s',
-            effect: 4000
+            baseCost: 250,
+            desc: 'Auto codes every 2s',
+            effect: 2000
         },
         xpBoost: {
             id: 'xpBoost',
