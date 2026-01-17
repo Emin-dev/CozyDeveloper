@@ -8,17 +8,17 @@ const Config = Object.freeze({
     STUDY_DURATION: 120000,
     STUDY_MULT: 0.15,
     LEVEL_MULT: 1.5,
-    IDLE_STRESS_REDUCTION: 0.15,
-    
+    IDLE_STRESS_REDUCTION: 1,
+
     DIFFICULTIES: {
         easy: { id: 'easy', label: 'Easy Mode', xpMult: 2.0, stressMult: 0.5, bugChance: 0.01, powerupDuration: 120, studyDuration: 180 },
         mid: { id: 'mid', label: 'Normal', xpMult: 1.0, stressMult: 1.0, bugChance: 0.03, powerupDuration: 60, studyDuration: 120 },
         hard: { id: 'hard', label: 'Hard Mode', xpMult: 0.7, stressMult: 1.5, bugChance: 0.05, powerupDuration: 20, studyDuration: 60 }
     },
-    
+
     AVATAR_SETS: {
-        developer: { 
-            id: 'developer', 
+        developer: {
+            id: 'developer',
             label: 'Developer',
             emojis: ['👶', '🧒', '👦', '👨', '👨‍💻', '👨‍🔧', '🧑‍💼', '👔', '🎩', '👑', '🧙', '🧙‍♂️', '🦸', '🦸‍♂️', '🚀', '⚡', '💎', '🔥', '⭐', '🌟']
         },
@@ -38,7 +38,7 @@ const Config = Object.freeze({
             emojis: ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '⭐', '🌟', '✨', '💫', '☄️', '🪐', '🌌', '🌠', '🚀', '🛸', '👽']
         }
     },
-    
+
     BACKGROUNDS: [
         { id: 'dark', colors: ['#0f111a', '#1a1d2e'], label: 'Dark' },
         { id: 'blue', colors: ['#1e3a8a', '#3b82f6'], label: 'Ocean' },
@@ -46,37 +46,37 @@ const Config = Object.freeze({
         { id: 'green', colors: ['#14532d', '#22c55e'], label: 'Matrix' },
         { id: 'sunset', colors: ['#7c2d12', '#f97316'], label: 'Sunset' }
     ],
-    
+
     POWERUPS: {
-        autoStress: { 
-            id: 'autoStress', 
-            name: 'Auto Rest', 
+        autoStress: {
+            id: 'autoStress',
+            name: 'Auto Rest',
             icon: '🧘',
-            baseCost: 100, 
+            baseCost: 100,
             desc: 'Slowly reduces burnout',
-            effect: 5
+            effect: 2
         },
-        autoClick: { 
-            id: 'autoClick', 
-            name: 'Auto Code', 
+        autoClick: {
+            id: 'autoClick',
+            name: 'Auto Code',
             icon: '🤖',
-            baseCost: 150, 
+            baseCost: 150,
             desc: 'Auto codes every 4s',
-            effect: 1000
+            effect: 4000
         },
-        xpBoost: { 
-            id: 'xpBoost', 
-            name: 'XP Boost', 
+        xpBoost: {
+            id: 'xpBoost',
+            name: 'XP Boost',
             icon: '⚡',
-            baseCost: 120, 
+            baseCost: 120,
             desc: '2× XP gains',
             effect: 2
         },
-        shield: { 
-            id: 'shield', 
-            name: 'Stress Shield', 
+        shield: {
+            id: 'shield',
+            name: 'Stress Shield',
             icon: '🛡️',
-            baseCost: 200, 
+            baseCost: 200,
             desc: 'No burnout gain',
             effect: 0
         }
@@ -87,12 +87,12 @@ class EventBus {
     constructor() {
         this.listeners = {};
     }
-    
+
     on(event, callback) {
         if (!this.listeners[event]) this.listeners[event] = [];
         this.listeners[event].push(callback);
     }
-    
+
     emit(event, data) {
         if (this.listeners[event]) {
             this.listeners[event].forEach(cb => cb(data));
@@ -106,7 +106,7 @@ class AudioEngine {
         this.enabled = true;
         this.initialized = false;
     }
-    
+
     init() {
         if (this.initialized) return;
         try {
@@ -116,12 +116,12 @@ class AudioEngine {
             this.enabled = false;
         }
     }
-    
+
     toggle() {
         this.enabled = !this.enabled;
         return this.enabled;
     }
-    
+
     playTone(freq, type = 'sine', duration = 0.1) {
         if (!this.enabled || !this.ctx) return;
         try {
@@ -135,30 +135,30 @@ class AudioEngine {
             gain.connect(this.ctx.destination);
             osc.start();
             osc.stop(this.ctx.currentTime + duration);
-        } catch (e) {}
+        } catch (e) { }
     }
-    
+
     sfxClick() {
         this.playTone(240, 'sine', 0.12);
         setTimeout(() => this.playTone(480, 'sine', 0.08), 40);
     }
-    
+
     sfxRest() {
         this.playTone(220, 'sine', 0.3);
         this.playTone(330, 'sine', 0.3);
     }
-    
+
     sfxStudy() {
         this.playTone(330, 'sine', 0.15);
         setTimeout(() => this.playTone(440, 'sine', 0.15), 60);
     }
-    
+
     sfxBuy() {
         this.playTone(440, 'sine', 0.15);
         setTimeout(() => this.playTone(660, 'sine', 0.15), 80);
         setTimeout(() => this.playTone(880, 'sine', 0.15), 160);
     }
-    
+
     sfxLevelUp(intensity = 1) {
         this.playTone(523, 'sine', 0.2);
         setTimeout(() => this.playTone(659, 'sine', 0.2), 100);
@@ -167,7 +167,7 @@ class AudioEngine {
             setTimeout(() => this.playTone(1047, 'sine', 0.3), 300);
         }
     }
-    
+
     sfxCrash(intensity = 1) {
         const baseFq = 160 - (intensity * 5);
         this.playTone(baseFq, 'triangle', 0.4);
@@ -176,13 +176,13 @@ class AudioEngine {
             setTimeout(() => this.playTone(baseFq - 80, 'sawtooth', 0.6), 240);
         }
     }
-    
+
     sfxTask() {
         [440, 554, 659, 880].forEach((f, i) => {
             setTimeout(() => this.playTone(f, 'sine', 0.12), i * 80);
         });
     }
-    
+
     sfxUIClick() {
         this.playTone(400, 'sine', 0.08);
     }
@@ -192,24 +192,29 @@ class HapticEngine {
     constructor() {
         this.enabled = true;
     }
-    
+
     toggle() {
         this.enabled = !this.enabled;
         return this.enabled;
     }
-    
+
     trigger(type = 'light') {
-        if (!this.enabled || !navigator.vibrate) return;
-        const patterns = {
-            light: [20],
-            medium: [40],
-            heavy: [60],
-            success: [30, 30, 60],
-            error: [100, 50, 100, 50, 200]
-        };
+        if (!this.enabled) return;
+
         try {
-            navigator.vibrate(patterns[type] || [30]);
-        } catch (e) {}
+            if (window.navigator && window.navigator.vibrate) {
+                const patterns = {
+                    light: 20,
+                    medium: 40,
+                    heavy: 60,
+                    success: [30, 30, 60],
+                    error: [100, 50, 100, 50, 200]
+                };
+                window.navigator.vibrate(patterns[type] || 30);
+            }
+        } catch (e) {
+            console.log('Vibration not supported');
+        }
     }
 }
 
@@ -221,10 +226,10 @@ class TaskGenerator {
             codes: [10, 25, 50, 100, 200]
         };
     }
-    
+
     generateTasks(state) {
         const tasks = [];
-        
+
         const nextMoneyTarget = this.getNextMoneyTarget(state.totalMoneyEarned);
         if (nextMoneyTarget) {
             tasks.push({
@@ -234,7 +239,7 @@ class TaskGenerator {
                 reward: { money: Math.floor(nextMoneyTarget * 0.2) }
             });
         }
-        
+
         const nextLevelTarget = this.getNextLevelTarget(state.level);
         if (nextLevelTarget) {
             tasks.push({
@@ -244,7 +249,7 @@ class TaskGenerator {
                 reward: { money: nextLevelTarget * 50 }
             });
         }
-        
+
         const nextCodeTarget = this.getNextCodeTarget(state.codeClicks);
         if (nextCodeTarget) {
             tasks.push({
@@ -254,7 +259,7 @@ class TaskGenerator {
                 reward: { money: nextCodeTarget * 2 }
             });
         }
-        
+
         if (state.restCount < 5) {
             tasks.push({
                 id: 'rest_5',
@@ -263,7 +268,7 @@ class TaskGenerator {
                 reward: { money: 50 }
             });
         }
-        
+
         if (state.studyCount < 3) {
             tasks.push({
                 id: 'study_3',
@@ -272,10 +277,10 @@ class TaskGenerator {
                 reward: { money: 100 }
             });
         }
-        
+
         return tasks.slice(0, 3);
     }
-    
+
     getNextMoneyTarget(current) {
         for (let target of this.baseTargets.money) {
             if (current < target) return target;
@@ -284,14 +289,14 @@ class TaskGenerator {
         const multiplier = Math.floor(current / lastTarget) + 1;
         return multiplier * 1000;
     }
-    
+
     getNextLevelTarget(current) {
         for (let target of this.baseTargets.level) {
             if (current < target) return target;
         }
         return Math.ceil((current + 5) / 5) * 5;
     }
-    
+
     getNextCodeTarget(current) {
         for (let target of this.baseTargets.codes) {
             if (current < target) return target;
@@ -307,7 +312,7 @@ class GameState {
         this.taskGenerator = new TaskGenerator();
         this.reset();
     }
-    
+
     reset() {
         this.xp = 0;
         this.xpMax = 100;
@@ -334,19 +339,19 @@ class GameState {
         this.currentTasks = [];
         this.updateTasks();
     }
-    
+
     updateTasks() {
         this.currentTasks = this.taskGenerator.generateTasks(this);
     }
-    
+
     getDifficulty() {
         return Config.DIFFICULTIES[this.difficultyId];
     }
-    
+
     getAvatarSet() {
         return Config.AVATAR_SETS[this.avatarSetId] || Config.AVATAR_SETS.developer;
     }
-    
+
     getCurrentAvatar() {
         const set = this.getAvatarSet();
         if (this.level <= 20) {
@@ -358,26 +363,26 @@ class GameState {
             return availableEmojis[randomIndex];
         }
     }
-    
+
     getBackground() {
         return Config.BACKGROUNDS.find(b => b.id === this.backgroundId) || Config.BACKGROUNDS[0];
     }
-    
+
     getMood() {
         if (this.stress < 30) return 'calm';
         if (this.stress < 60) return 'focused';
         if (this.stress < 80) return 'stressed';
         return 'panic';
     }
-    
+
     isPowerupActive(id) {
         return this.activePowerups[id] && this.activePowerups[id] > Date.now();
     }
-    
+
     isStudyActive() {
         return this.studyEndTime > Date.now();
     }
-    
+
     updateIdleStress() {
         const now = Date.now();
         const timeSinceAction = now - this.lastActionTime;
@@ -385,56 +390,56 @@ class GameState {
             this.stress = Math.max(0, this.stress - Config.IDLE_STRESS_REDUCTION);
         }
     }
-    
+
     code() {
         if (this.isGameOver) return null;
-        
+
         this.lastActionTime = Date.now();
         const diff = this.getDifficulty();
         let efficiency = 1.0;
         if (this.stress > 80) efficiency = 0.5;
-        
+
         let xpBoost = this.isPowerupActive('xpBoost') ? 2 : 1;
         let studyBoost = this.isStudyActive() ? this.studyMultiplier : 1;
         let stressBlock = this.isPowerupActive('shield') ? 0 : 1;
-        
+
         const gainXP = Math.floor(Config.BASE_XP * this.xpMultiplier * studyBoost * diff.xpMult * efficiency * xpBoost);
         const gainMoney = Math.floor(Config.BASE_MONEY * this.xpMultiplier * diff.xpMult * efficiency);
         const addStress = Config.STRESS_COST * this.stressMultiplier * diff.stressMult * stressBlock;
-        
+
         this.xp += gainXP;
         this.money += gainMoney;
         this.totalMoneyEarned += gainMoney;
         this.stress = Math.min(100, this.stress + addStress);
         this.codeClicks++;
-        
+
         const leveledUp = this.checkLevelUp();
-        
+
         if (this.stress >= 100) {
             this.triggerGameOver();
             return { gameOver: true };
         }
-        
+
         if (this.stress > 70) {
             this.highStressTime++;
             const bugMultiplier = Math.floor(this.highStressTime / 10);
             const bugChance = diff.bugChance * (1 + bugMultiplier);
-            
+
             if (Math.random() < bugChance) {
                 this.bus.emit('spawnBug');
             }
         } else {
             this.highStressTime = Math.max(0, this.highStressTime - 1);
         }
-        
+
         this.checkTasks();
-        
+
         return { xp: gainXP, money: gainMoney, efficiency, leveledUp };
     }
-    
+
     rest() {
         if (this.isGameOver || this.money < Config.REST_COST) return false;
-        
+
         this.lastActionTime = Date.now();
         this.money -= Config.REST_COST;
         this.stress = Math.max(0, this.stress - Config.STRESS_HEAL);
@@ -443,41 +448,41 @@ class GameState {
         this.checkTasks();
         return true;
     }
-    
+
     study() {
         if (this.isGameOver || this.money < Config.STUDY_COST) return false;
-        
+
         this.lastActionTime = Date.now();
         this.money -= Config.STUDY_COST;
         this.studyMultiplier += Config.STUDY_MULT;
         this.stress = Math.min(100, this.stress + 5);
         this.studyCount++;
-        
+
         const duration = this.getDifficulty().studyDuration * 1000;
         this.studyEndTime = Date.now() + duration;
-        
+
         this.checkTasks();
         return { newMult: this.studyMultiplier, duration };
     }
-    
+
     activatePowerup(type) {
         if (this.isGameOver) return false;
         const powerup = Config.POWERUPS[type];
         const cost = this.powerupCosts[type];
-        
+
         if (this.money >= cost && powerup) {
             this.money -= cost;
             this.powerupCosts[type] = Math.floor(this.powerupCosts[type] * 1.3);
-            
+
             const duration = this.getDifficulty().powerupDuration * 1000;
             this.activePowerups[type] = Date.now() + duration;
-            
+
             this.bus.emit('powerupActivated', { type, duration });
             return true;
         }
         return false;
     }
-    
+
     checkLevelUp() {
         if (this.xp >= this.xpMax) {
             this.level++;
@@ -490,13 +495,13 @@ class GameState {
         }
         return false;
     }
-    
+
     triggerGameOver() {
         this.isGameOver = true;
         this.stress = 100;
         this.bus.emit('gameOver', { level: this.level });
     }
-    
+
     checkTasks() {
         let taskCompleted = false;
         this.currentTasks.forEach(task => {
@@ -511,12 +516,12 @@ class GameState {
                 taskCompleted = true;
             }
         });
-        
+
         if (taskCompleted) {
             this.updateTasks();
         }
     }
-    
+
     serialize() {
         return {
             xp: this.xp,
@@ -539,7 +544,7 @@ class GameState {
             highStressTime: this.highStressTime
         };
     }
-    
+
     deserialize(data) {
         Object.assign(this, data);
         this.completedTasks = new Set(data.completedTasks || []);
@@ -558,83 +563,83 @@ class BugController {
         this.audio = audio;
         this.haptic = haptic;
         this.activeBugs = [];
-        
+
         bus.on('spawnBug', () => this.spawn());
     }
-    
+
     spawn() {
         if (this.state.isGameOver) return;
-        
+
         const bug = {
             id: Date.now() + Math.random(),
             el: null,
             eatTimer: null,
             despawnTimer: null
         };
-        
+
         bug.el = document.createElement('div');
         bug.el.className = 'bug';
         bug.el.innerText = '🐛';
         document.getElementById('click-zone').appendChild(bug.el);
-        
+
         const avatar = document.getElementById('avatar').getBoundingClientRect();
         bug.el.style.left = `${avatar.left + avatar.width / 2}px`;
         bug.el.style.top = `${avatar.top}px`;
-        
+
         this.activeBugs.push(bug);
-        
+
         setTimeout(() => this.flyToBar(bug), 100);
     }
-    
+
     flyToBar(bug) {
         const xpBar = document.getElementById('xp-bar');
         const rect = xpBar.getBoundingClientRect();
         const xpPct = (this.state.xp / this.state.xpMax);
         const targetX = rect.left + (rect.width * xpPct);
         const targetY = rect.top - 30;
-        
+
         bug.el.style.transition = 'all 1.5s cubic-bezier(0.4, 0.0, 0.2, 1)';
         bug.el.style.left = `${targetX}px`;
         bug.el.style.top = `${targetY}px`;
-        
+
         setTimeout(() => this.startEating(bug), 1700);
     }
-    
+
     startEating(bug) {
         bug.eatTimer = setInterval(() => {
             if (this.state.stress <= 0) {
                 this.despawn(bug);
                 return;
             }
-            
+
             const damage = Math.floor(this.state.xp * 0.25);
             this.state.xp = Math.max(0, this.state.xp - damage);
             this.state.money = Math.max(0, this.state.money - 10);
             this.bus.emit('bugEat', { damage });
             this.updatePosition(bug);
-            
+
         }, 2500);
-        
+
         bug.despawnTimer = setTimeout(() => this.despawn(bug), 25000);
     }
-    
+
     updatePosition(bug) {
         const xpBar = document.getElementById('xp-bar');
         const rect = xpBar.getBoundingClientRect();
         const xpPct = (this.state.xp / this.state.xpMax);
         const targetX = rect.left + (rect.width * xpPct);
-        
+
         bug.el.style.transition = 'left 0.5s ease-out';
         bug.el.style.left = `${targetX}px`;
     }
-    
+
     despawn(bug) {
         const index = this.activeBugs.indexOf(bug);
         if (index > -1) this.activeBugs.splice(index, 1);
-        
+
         clearInterval(bug.eatTimer);
         clearTimeout(bug.despawnTimer);
-        
+
         if (bug.el) {
             bug.el.style.opacity = '0';
             setTimeout(() => bug.el && bug.el.remove(), 300);
@@ -648,10 +653,10 @@ class PowerupManager {
         this.bus = bus;
         this.autoClickInterval = null;
         this.autoStressInterval = null;
-        
+
         setInterval(() => this.update(), 100);
     }
-    
+
     update() {
         if (this.state.isPowerupActive('autoClick') && !this.autoClickInterval) {
             this.autoClickInterval = setInterval(() => {
@@ -663,7 +668,7 @@ class PowerupManager {
                 }
             }, Config.POWERUPS.autoClick.effect);
         }
-        
+
         if (this.state.isPowerupActive('autoStress') && !this.autoStressInterval) {
             this.autoStressInterval = setInterval(() => {
                 if (this.state.isPowerupActive('autoStress')) {
@@ -678,6 +683,79 @@ class PowerupManager {
     }
 }
 
+class AvatarDragController {
+    constructor(avatarEl, bus, haptic) {
+        this.avatar = avatarEl;
+        this.bus = bus;
+        this.haptic = haptic;
+        this.isDragging = false;
+        this.startX = 0;
+        this.startY = 0;
+        this.currentX = 0;
+        this.currentY = 0;
+        this.originalX = 0;
+        this.originalY = 0;
+
+        this.init();
+    }
+
+    init() {
+        this.avatar.addEventListener('touchstart', this.onStart.bind(this), { passive: false });
+        this.avatar.addEventListener('touchmove', this.onMove.bind(this), { passive: false });
+        this.avatar.addEventListener('touchend', this.onEnd.bind(this));
+
+        this.avatar.addEventListener('mousedown', this.onStart.bind(this));
+        document.addEventListener('mousemove', this.onMove.bind(this));
+        document.addEventListener('mouseup', this.onEnd.bind(this));
+    }
+
+    onStart(e) {
+        e.preventDefault();
+        this.isDragging = true;
+        this.avatar.classList.add('dragging');
+
+        const rect = this.avatar.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        this.originalX = centerX;
+        this.originalY = centerY;
+
+        const touch = e.touches ? e.touches[0] : e;
+        this.startX = touch.clientX;
+        this.startY = touch.clientY;
+
+        this.haptic.trigger('light');
+    }
+
+    onMove(e) {
+        if (!this.isDragging) return;
+        e.preventDefault();
+
+        const touch = e.touches ? e.touches[0] : e;
+        this.currentX = touch.clientX - this.startX;
+        this.currentY = touch.clientY - this.startY;
+
+        this.avatar.style.transform = `translate(${this.currentX}px, ${this.currentY}px)`;
+    }
+
+    onEnd(e) {
+        if (!this.isDragging) return;
+
+        this.isDragging = false;
+        this.avatar.classList.remove('dragging');
+
+        this.avatar.style.transition = 'transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+        this.avatar.style.transform = 'translate(0, 0)';
+
+        setTimeout(() => {
+            this.avatar.style.transition = '';
+        }, 500);
+
+        this.haptic.trigger('medium');
+    }
+}
+
 class UI {
     constructor(state, bus, audio, haptic) {
         this.state = state;
@@ -685,10 +763,16 @@ class UI {
         this.audio = audio;
         this.haptic = haptic;
         this.settingsOpen = false;
+        this.toastQueue = [];
+        this.powerupGlowTimers = {};
+        this.powerupAffordableState = {};
         this.cacheElements();
         this.setupListeners();
+        this.dragController = null;
     }
-    
+
+
+
     cacheElements() {
         this.els = {
             xpBar: document.getElementById('xp-bar'),
@@ -707,7 +791,7 @@ class UI {
             speech: document.getElementById('speech')
         };
     }
-    
+
     setupListeners() {
         this.bus.on('levelUp', data => this.onLevelUp(data));
         this.bus.on('gameOver', data => this.onGameOver(data));
@@ -715,8 +799,10 @@ class UI {
         this.bus.on('bugEat', () => this.onBugEat());
         this.bus.on('powerupActivated', data => this.onPowerupActivated(data));
         this.bus.on('render', () => this.render());
+
+        this.dragController = new AvatarDragController(this.els.avatar, this.bus, this.haptic);
     }
-    
+
     render() {
         if (this.state.isGameOver) {
             this.els.gameOverScreen.style.display = 'flex';
@@ -724,13 +810,13 @@ class UI {
             document.getElementById('final-codes').innerText = this.state.codeClicks;
             return;
         }
-        
+
         this.els.gameOverScreen.style.display = 'none';
-        
+
         const xpPct = (this.state.xp / this.state.xpMax) * 100;
         this.els.xpBar.style.width = `${xpPct}%`;
         this.els.stressBar.style.width = `${this.state.stress}%`;
-        
+
         const mood = this.state.getMood();
         if (mood === 'panic') {
             this.els.stressBar.style.background = '#ef4444';
@@ -742,13 +828,13 @@ class UI {
             this.els.stressBar.style.background = '#10b981';
             this.els.avatar.style.animation = 'none';
         }
-        
+
         this.els.levelText.innerText = `LVL ${this.state.level} • ${this.state.getDifficulty().label}`;
         this.els.xpText.innerText = `${this.state.xp} / ${this.state.xpMax}`;
         this.els.stressText.innerText = `${Math.floor(this.state.stress)}%`;
         this.els.moneyText.innerText = `$${this.state.money}`;
         this.els.avatar.innerText = this.state.getCurrentAvatar();
-        
+
         const studyActive = this.state.isStudyActive();
         if (studyActive) {
             const remaining = Math.ceil((this.state.studyEndTime - Date.now()) / 1000);
@@ -756,45 +842,86 @@ class UI {
         } else {
             this.els.studyMultText.innerText = `×${this.state.studyMultiplier.toFixed(1)}`;
         }
-        
+
         this.updatePowerups();
         this.updateBackground();
         this.updateTasks();
     }
-    
+
     updatePowerups() {
-        Object.values(Config.POWERUPS).forEach(powerup => {
-            const btn = document.getElementById(`btn-${powerup.id}`);
-            const cost = document.getElementById(`cost-${powerup.id}`);
-            const timer = document.getElementById(`timer-${powerup.id}`);
+    Object.values(Config.POWERUPS).forEach(powerup => {
+        const btn = document.getElementById(`btn-${powerup.id}`);
+        const cost = document.getElementById(`cost-${powerup.id}`);
+        const timer = document.getElementById(`timer-${powerup.id}`);
+
+        if (!btn || !cost) return;
+
+        cost.innerText = `$${this.state.powerupCosts[powerup.id]}`;
+        const active = this.state.isPowerupActive(powerup.id);
+        const canAfford = this.state.money >= this.state.powerupCosts[powerup.id];
+        const wasAffordable = this.powerupAffordableState[powerup.id] || false;
+
+        
+        btn.classList.toggle('active', active);
+        btn.classList.toggle('disabled', !active && !canAfford);
+
+        
+        if (active) {
             
-            if (btn && cost) {
-                cost.innerText = `$${this.state.powerupCosts[powerup.id]}`;
-                const active = this.state.isPowerupActive(powerup.id);
-                btn.classList.toggle('active', active);
-                btn.classList.toggle('disabled', !active && this.state.money < this.state.powerupCosts[powerup.id]);
-                
-                if (timer) {
-                    if (active) {
-                        const remaining = Math.ceil((this.state.activePowerups[powerup.id] - Date.now()) / 1000);
-                        timer.innerText = `${remaining}s`;
-                        timer.style.display = 'block';
-                    } else {
-                        timer.style.display = 'none';
-                    }
-                }
+            this.powerupAffordableState[powerup.id] = false;
+            if (this.powerupGlowTimers[powerup.id]) {
+                clearTimeout(this.powerupGlowTimers[powerup.id]);
+                this.powerupGlowTimers[powerup.id] = null;
             }
-        });
-    }
-    
+            btn.classList.remove('can-afford');
+        } else if (canAfford && !wasAffordable) {
+            
+            btn.classList.add('can-afford');
+            this.powerupAffordableState[powerup.id] = true;
+
+            
+            if (this.powerupGlowTimers[powerup.id]) {
+                clearTimeout(this.powerupGlowTimers[powerup.id]);
+            }
+
+            
+            this.powerupGlowTimers[powerup.id] = setTimeout(() => {
+                btn.classList.remove('can-afford');
+                this.powerupGlowTimers[powerup.id] = null;
+            }, 10000);
+        } else if (!canAfford) {
+            
+            this.powerupAffordableState[powerup.id] = false;
+            if (this.powerupGlowTimers[powerup.id]) {
+                clearTimeout(this.powerupGlowTimers[powerup.id]);
+                this.powerupGlowTimers[powerup.id] = null;
+            }
+            btn.classList.remove('can-afford');
+        }
+
+        
+        if (timer) {
+            if (active) {
+                const remaining = Math.ceil((this.state.activePowerups[powerup.id] - Date.now()) / 1000);
+                timer.innerText = `${remaining}s`;
+                timer.style.display = 'block';
+            } else {
+                timer.style.display = 'none';
+            }
+        }
+    });
+}
+
+
+
     updateBackground() {
         const bg = this.state.getBackground();
         this.els.bgLayer.style.background = `linear-gradient(135deg, ${bg.colors[0]}, ${bg.colors[1]})`;
     }
-    
+
     updateTasks() {
         if (!this.els.tasksList) return;
-        
+
         this.els.tasksList.innerHTML = '';
         this.state.currentTasks.forEach(task => {
             const div = document.createElement('div');
@@ -808,7 +935,7 @@ class UI {
             this.els.tasksList.appendChild(div);
         });
     }
-    
+
     toggleSettings() {
         this.settingsOpen = !this.settingsOpen;
         this.els.settingsPanel.classList.toggle('open', this.settingsOpen);
@@ -816,12 +943,12 @@ class UI {
             this.renderSettings();
         }
     }
-    
+
     renderSettings() {
         const diffPanel = document.getElementById('diff-options');
         const avatarPanel = document.getElementById('avatar-options');
         const bgPanel = document.getElementById('bg-options');
-        
+
         if (diffPanel) {
             diffPanel.innerHTML = '';
             Object.values(Config.DIFFICULTIES).forEach(diff => {
@@ -840,7 +967,7 @@ class UI {
                 diffPanel.appendChild(btn);
             });
         }
-        
+
         if (avatarPanel) {
             avatarPanel.innerHTML = '';
             Object.values(Config.AVATAR_SETS).forEach(set => {
@@ -860,7 +987,7 @@ class UI {
                 avatarPanel.appendChild(btn);
             });
         }
-        
+
         if (bgPanel) {
             bgPanel.innerHTML = '';
             Config.BACKGROUNDS.forEach(bg => {
@@ -881,7 +1008,7 @@ class UI {
             });
         }
     }
-    
+
     spawnFloater(text, color, x, y) {
         const el = document.createElement('div');
         el.className = 'floater';
@@ -893,33 +1020,58 @@ class UI {
         this.els.clickZone.appendChild(el);
         setTimeout(() => el.remove(), 800);
     }
-    
+
     showToast(text, type = 'info') {
+        if (!this.toastQueue) this.toastQueue = [];
+
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.innerText = text;
+
+        const position = this.toastQueue.length;
+        const topOffset = 60 + (position * 60);
+
+        toast.style.top = `${topOffset}px`;
         document.body.appendChild(toast);
-        
+
+        this.toastQueue.push(toast);
+
         setTimeout(() => toast.classList.add('show'), 100);
+
         setTimeout(() => {
             toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
+            setTimeout(() => {
+                toast.remove();
+                const index = this.toastQueue.indexOf(toast);
+                if (index > -1) {
+                    this.toastQueue.splice(index, 1);
+                    this.repositionToasts();
+                }
+            }, 300);
         }, 2500);
     }
-    
+
+    repositionToasts() {
+        this.toastQueue.forEach((toast, index) => {
+            const newTop = 60 + (index * 60);
+            toast.style.top = `${newTop}px`;
+        });
+    }
+
+
     showSpeech(text, duration = 2000) {
         this.els.speech.innerText = text;
         this.els.speech.classList.add('show');
         setTimeout(() => this.els.speech.classList.remove('show'), duration);
     }
-    
+
     onLevelUp(data) {
         this.audio.sfxLevelUp(data.level);
         this.haptic.trigger('success');
-        
+
         this.showToast(`🎉 Level ${data.level} Reached!`, 'success');
         this.showCelebration();
-        
+
         const messages = [
             'Level up! Avatar evolved!',
             'You\'re growing stronger!',
@@ -929,11 +1081,11 @@ class UI {
         ];
         this.showSpeech(messages[Math.floor(Math.random() * messages.length)]);
     }
-    
+
     showCelebration() {
         const clickZone = this.els.clickZone;
         const colors = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
-        
+
         for (let i = 0; i < 15; i++) {
             setTimeout(() => {
                 const particle = document.createElement('div');
@@ -947,31 +1099,33 @@ class UI {
             }, i * 100);
         }
     }
-    
+
     onGameOver(data) {
         const intensity = Math.min(data.level, 10);
         this.audio.sfxCrash(intensity);
-        
+
         const shakeClass = intensity < 5 ? 'shake-light' : intensity < 8 ? 'shake-medium' : 'shake-heavy';
         this.els.gameOverScreen.classList.add(shakeClass);
         setTimeout(() => this.els.gameOverScreen.classList.remove(shakeClass), 1000);
-        
+
         const vibPattern = intensity < 5 ? [100] : intensity < 8 ? [100, 50, 100] : [100, 50, 100, 50, 200];
-        if (navigator.vibrate) navigator.vibrate(vibPattern);
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(vibPattern);
+        }
     }
-    
+
     onTaskComplete(task) {
         this.audio.sfxTask();
         this.haptic.trigger('success');
         this.showToast(`✓ ${task.desc}`, 'success');
         this.updateTasks();
     }
-    
+
     onBugEat() {
         this.showSpeech('🐛 Bug eating progress!', 1500);
         this.render();
     }
-    
+
     onPowerupActivated(data) {
         const powerup = Config.POWERUPS[data.type];
         this.showToast(`${powerup.icon} ${powerup.name} activated!`, 'info');
@@ -983,17 +1137,17 @@ class SaveManager {
         this.state = state;
         this.bus = bus;
         this.key = 'emindev_save_v4';
-        
+
         bus.on('save', () => this.save());
         setInterval(() => this.save(), 30000);
     }
-    
+
     save() {
         try {
             localStorage.setItem(this.key, JSON.stringify(this.state.serialize()));
-        } catch (e) {}
+        } catch (e) { }
     }
-    
+
     load() {
         try {
             const data = localStorage.getItem(this.key);
@@ -1001,14 +1155,14 @@ class SaveManager {
                 this.state.deserialize(JSON.parse(data));
                 return true;
             }
-        } catch (e) {}
+        } catch (e) { }
         return false;
     }
-    
+
     clear() {
         try {
             localStorage.removeItem(this.key);
-        } catch (e) {}
+        } catch (e) { }
     }
 }
 
@@ -1027,22 +1181,22 @@ function handleCode(e) {
     if (locked || state.isGameOver) return;
     locked = true;
     setTimeout(() => locked = false, 100);
-    
+
     audio.init();
     const result = state.code();
-    
+
     if (result && !result.gameOver) {
         audio.sfxClick();
         haptic.trigger('light');
-        
+
         const rect = ui.els.avatar.getBoundingClientRect();
         const xpText = result.efficiency < 1 ? `+${result.xp} XP ⚠️` : `+${result.xp} XP`;
         const color = result.efficiency < 1 ? '#f87171' : '#3b82f6';
-        
+
         ui.spawnFloater(xpText, color, rect.left + 30, rect.top);
         ui.spawnFloater(`+$${result.money}`, '#f59e0b', rect.left + 60, rect.top + 20);
     }
-    
+
     ui.render();
     bus.emit('save');
 }
@@ -1069,7 +1223,7 @@ function handleStudy() {
         audio.init();
         audio.sfxStudy();
         haptic.trigger('medium');
-        ui.showToast(`Study boost! ×${result.newMult.toFixed(1)} for ${Math.floor(result.duration/1000)}s`, 'info');
+        ui.showToast(`Study boost! ×${result.newMult.toFixed(1)} for ${Math.floor(result.duration / 1000)}s`, 'info');
         ui.render();
         bus.emit('save');
     } else {
@@ -1111,22 +1265,22 @@ setInterval(() => {
 document.addEventListener('DOMContentLoaded', () => {
     saveManager.load();
     ui.render();
-    
+
     setInterval(() => ui.updatePowerups(), 500);
-    
+
     document.getElementById('btn-code').addEventListener('touchstart', e => { e.preventDefault(); handleCode(e); });
     document.getElementById('btn-code').addEventListener('click', handleCode);
     document.getElementById('btn-rest').addEventListener('click', handleRest);
     document.getElementById('btn-study').addEventListener('click', handleStudy);
-    
+
     Object.values(Config.POWERUPS).forEach(powerup => {
         const btn = document.getElementById(`btn-${powerup.id}`);
         if (btn) btn.addEventListener('click', () => handlePowerup(powerup.id));
     });
-    
+
     document.getElementById('btn-settings').addEventListener('click', () => ui.toggleSettings());
     document.getElementById('btn-close-settings').addEventListener('click', () => ui.toggleSettings());
-    
+
     document.getElementById('btn-sound').addEventListener('click', e => {
         audio.init();
         const isOn = audio.toggle();
@@ -1134,13 +1288,13 @@ document.addEventListener('DOMContentLoaded', () => {
         haptic.trigger('light');
         ui.showToast(isOn ? 'Sound enabled' : 'Sound disabled', 'info');
     });
-    
+
     document.getElementById('btn-haptic').addEventListener('click', e => {
         const isOn = haptic.toggle();
         e.target.innerText = isOn ? '📳 Vibration' : '🔕 Vibration';
         if (isOn) haptic.trigger('medium');
         ui.showToast(isOn ? 'Vibration enabled' : 'Vibration disabled', 'info');
     });
-    
+
     document.getElementById('btn-reboot').addEventListener('click', handleReboot);
 });
