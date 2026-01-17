@@ -8,7 +8,7 @@ const Config = Object.freeze({
     STUDY_DURATION: 120000,
     STUDY_MULT: 0.15,
     LEVEL_MULT: 1.5,
-    IDLE_STRESS_REDUCTION: 0.15,
+    IDLE_STRESS_REDUCTION: 1,
 
     DIFFICULTIES: {
         easy: { id: 'easy', label: 'Easy Mode', xpMult: 2.0, stressMult: 0.5, bugChance: 0.01, powerupDuration: 120, studyDuration: 180 },
@@ -104,38 +104,48 @@ class AudioEngine {
     constructor() {
         this.ctx = null;
         this.enabled = true;
-        this.initialized = false;
     }
 
     init() {
-        if (this.initialized) return;
+        if (this.ctx) return;
+
         try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.initialized = true;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) {
+                this.enabled = false;
+                return;
+            }
+            this.ctx = new AudioContext();
         } catch (e) {
             this.enabled = false;
         }
     }
 
-    toggle() {
-        this.enabled = !this.enabled;
-        return this.enabled;
-    }
-
     playTone(freq, type = 'sine', duration = 0.1) {
+        if (!this.ctx) this.init();
         if (!this.enabled || !this.ctx) return;
+
+        // Fix for browser sound policy: resume if suspended
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+
         try {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
+
             osc.type = type;
             osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
             gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
             osc.connect(gain);
             gain.connect(this.ctx.destination);
+
             osc.start();
             osc.stop(this.ctx.currentTime + duration);
-        } catch (e) { }
+        } catch (e) {}
     }
 
     sfxClick() {
@@ -185,6 +195,14 @@ class AudioEngine {
 
     sfxUIClick() {
         this.playTone(400, 'sine', 0.08);
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        if (this.enabled && this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+        return this.enabled;
     }
 }
 
@@ -780,6 +798,13 @@ class UIController {
     }
 
     init() {
+        // Init Toast Container
+        if (!document.querySelector('.toast-container')) {
+            this.toastContainer = document.createElement('div');
+            this.toastContainer.className = 'toast-container';
+            document.body.appendChild(this.toastContainer);
+        }
+
         this.elements.btnCode.addEventListener('click', () => this.handleCode());
         this.elements.btnRest.addEventListener('click', () => this.handleRest());
         this.elements.btnStudy.addEventListener('click', () => this.handleStudy());
@@ -897,8 +922,9 @@ class UIController {
             this.haptic.trigger('light');
         }
 
-        this.showFloater(`+${result.xp} XP`, this.elements.avatar, '#3b82f6');
-        this.showFloater(`+$${result.money}`, this.elements.avatar, '#f59e0b');
+        // Split directions: XP left, Money right
+        this.showFloater(`+${result.xp} XP`, this.elements.avatar, 'xp', -30);
+        this.showFloater(`+$${result.money}`, this.elements.avatar, 'money', 30);
 
         if (result.efficiency < 1) {
             this.showSpeech('Stressed! Lower efficiency!', 2000);
@@ -912,7 +938,7 @@ class UIController {
             this.audio.sfxRest();
             this.haptic.trigger('medium');
             this.showSpeech('Feeling better! ☕', 1500);
-            this.showFloater('-30 Burnout', this.elements.avatar, '#10b981');
+            this.showFloater('-30 Burnout', this.elements.avatar, 'xp', 0);
             this.render();
         }
     }
@@ -1087,15 +1113,22 @@ class UIController {
         }, duration);
     }
 
-    showFloater(text, target, color) {
+    showFloater(text, target, type, baseOffset = 0) {
         const floater = document.createElement('div');
-        floater.className = 'floater';
+        floater.className = `floater float-${type}`;
         floater.textContent = text;
-        floater.style.color = color;
 
         const rect = target.getBoundingClientRect();
-        floater.style.left = `${rect.left + rect.width / 2}px`;
-        floater.style.top = `${rect.top}px`;
+        
+        
+        const jitterX = (Math.random() - 0.5) * 40;
+        const jitterY = (Math.random() - 0.5) * 20;
+
+        const startX = rect.left + (rect.width / 2) + baseOffset + jitterX;
+        const startY = rect.top + jitterY;
+
+        floater.style.left = `${startX}px`;
+        floater.style.top = `${startY}px`;
 
         document.body.appendChild(floater);
 
@@ -1127,12 +1160,20 @@ class UIController {
     }
 
     showToast(message, type = 'info') {
+        if (!this.toastContainer) {
+             this.toastContainer = document.querySelector('.toast-container');
+        }
+
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.textContent = message;
-        document.body.appendChild(toast);
+        
+        this.toastContainer.appendChild(toast);
 
-        setTimeout(() => toast.classList.add('show'), 10);
+        requestAnimationFrame(() => {
+            setTimeout(() => toast.classList.add('show'), 10);
+        });
+
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
